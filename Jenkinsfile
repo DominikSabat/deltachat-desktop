@@ -1,63 +1,78 @@
 pipeline {
-	agent {
+    agent {
         docker { image 'node:latest' }
     }
-
-	stages {
-		stage('Build') { 
-			steps {
-				echo 'Build'
-				checkout scm
-				sh 'npm install'
-				sh 'npm run build'
-			}
-		}
-		stage('Test') { 
-			steps {
-				echo 'Test'
-				sh 'npm run test'
-			}
-		}
-		stage('Deploy') {
-			steps {
-				echo 'Deploy'
-				sh 'docker build -t deltachat-deploy -f Dockerfile-deploy .'
-			}
-			post {
-				success {
-				    echo 'Success'
-				    emailext attachLog: true,
-					body: "Deploy Success",
-					to: 'domin008.5ds@gmail.com',
-					subject: "Successful deploy"
-				}
-				failure {
-				    echo 'Fail'
-				    emailext attachLog: true,
-				    	body: "Deploy Fail",
-				       	to: 'domin008.5ds@gmail.com',
-					subject: "Failed deploy"
-			     	}
-		    	}
-		}
-	}
-	post {
-		always {
-			echo 'Finished'
-		}
-		success {
-			echo 'Success'
-			emailext attachLog: true, 
-			body: "Success",
-			subject: "Pipeline Test Passed",
-			to: 'domin008.5ds@gmail.com'
-		}
-		failure {
-			echo 'Failure'
-			emailext attachLog: true, 
-			body: "Error:  ${env.BUILD_URL}",
-			subject: "Pipeline Test Failed",
-			to: 'domin008.5ds@gmail.com'
-		}
-	}
+    stages {
+        stage('Build') {
+            steps {
+                echo 'Building.......'
+		checkout scm
+		sh 'npm install'
+		sh 'npm run build'
+            }
+	      post {
+        failure {
+            emailext attachLog: true,
+                body: "${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}",
+                recipientProviders: [developers(), requestor()],
+                to: 'domin008.5ds@gmail.com',
+                subject: "Build failed in Jenkins ${currentBuild.currentResult}: Job ${env.JOB_NAME}"
+        }
+        success {
+            emailext attachLog: true,
+                body: "${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}",
+                recipientProviders: [developers(), requestor()],
+                to: 'domin008.5ds@gmail.com',
+                subject: "Successful build in Jenkins ${currentBuild.currentResult}: Job ${env.JOB_NAME}"
+        }
+    }
+        }
+        stage('Test') {
+	   when {
+              	expression {currentBuild.result == null || currentBuild.result == 'SUCCESS'}
+            }
+            steps {
+                echo 'Testing..........'
+		sh 'npm test'
+            }
+	     post {
+        failure {
+            emailext attachLog: true,
+                body: "${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}",
+                recipientProviders: [developers(), requestor()],
+                to: 'domin008.5ds@gmail.com',
+                subject: "Test failed in Jenkins ${currentBuild.currentResult}: Job ${env.JOB_NAME}"
+        }
+        success {
+            emailext attachLog: true,
+                body: "${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}",
+                recipientProviders: [developers(), requestor()],
+                to: 'domin008.5ds@gmail.com',
+                subject: "Successful test in Jenkins ${currentBuild.currentResult}: Job ${env.JOB_NAME}"
+        }
+    }
+        }
+        stage('Deploy') {
+            steps {
+                echo 'Deploying......'
+		sh 'docker build -t delta-chat -f Dockerfile-deploy .'
+            }
+	  post {
+        failure {
+            emailext attachLog: true,
+                body: "${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}",
+                recipientProviders: [developers(), requestor()],
+                to: 'domin008.5ds@gmail.com',
+                subject: "Deploy failed in Jenkins ${currentBuild.currentResult}: Job ${env.JOB_NAME}"
+        }
+        success {
+            emailext attachLog: true,
+                body: "${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}",
+                recipientProviders: [developers(), requestor()],
+                to: 'domin008.5ds@gmail.com',
+                subject: "Successful deploy in Jenkins ${currentBuild.currentResult}: Job ${env.JOB_NAME}"
+        }
+       }
+      }
+    }
 }
